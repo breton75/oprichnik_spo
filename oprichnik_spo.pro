@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui sql widgets
+QT       += core gui sql widgets network
 
 TARGET = oprichnik_spo
 TEMPLATE = app

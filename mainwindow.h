@@ -5,6 +5,10 @@
 #include <QObject>
 #include <QtSql>
 
+
+#include <QTimer>
+#include <QTcpSocket>
+
 namespace Ui {
 class MainWindow;
 }
@@ -22,6 +26,8 @@ private slots:
 
     void on_pbnCRC16_clicked();
 
+    void on_bnStart_clicked();
+    
 private:
     Ui::MainWindow *ui;
 
@@ -34,6 +40,31 @@ private:
     void clearDB();
     void restoreProjDataFromFile();
     void fix(QString msg); // тестовое сообщение
+};
+
+class SvDevicePull: public QRunnable
+{
+public:
+  QTimer timer;
+  QTimer awaitResponse;
+  bool isOnline;
+  
+  QString ip;
+  quint16 port;
+  
+  void run();
+    
+private:
+  QTcpSocket socket;
+  
+private slots:
+  void getStatus();
+  void getData();
+  void disconnectFormHost();
+  
+signals:
+  void status();
+  
 };
 
 #endif // MAINWINDOW_H

@@ -4,7 +4,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 
-#include "../common/u_log.h"
+#include "u_log.h"
 #include "pg_scripts.h"
 #include "u_crc16.h"
 
@@ -57,8 +57,8 @@ void MainWindow::initDB(bool withCheckTables)
     db = QSqlDatabase::addDatabase("QPSQL");//, "postgres");
 
     //db.addDatabase("QPSQL");
-    db.setHostName("localhost");
-    //db.setHostName("172.16.2.117");
+//    db.setHostName("localhost");
+    db.setHostName("172.16.4.83");
     db.setPort(5432);
     db.setDatabaseName(DBName);//DATABASE_NAME); // postgres
     db.setUserName("postgres");
@@ -751,4 +751,70 @@ void MainWindow::on_pbnCRC16_clicked()
     logMsg(msgInfo, tr("123456789 + crc = %1").arg(QString(ba)));
     logMsg(msgInfo, tr("crc: %1, as QByteArray: %2").arg(crc).arg(QString(QByteArray().append(lo_crc).append(hi_crc))));
 
+}
+
+
+/** свиридов **/
+void MainWindow::on_bnStart_clicked()
+{
+      
+}
+
+
+
+
+
+
+SvDevicePull::run()
+{
+  socket = QTcpSocket(this);
+  connect(socket, SIGNAL(readyRead()), this, SLOT(getData()));
+  
+  timer = QTimer(this);
+  timer.setInterval(1000);
+  connect(timer, SIGNAL(QTimer::timeout()), this, SLOT(getStatus()));
+  
+  awaitResponse = QTimer(this);
+  connect(awaitResponse, SIGNAL(QTimer::timeout()), this, SLOT(disconnectFormHost()));
+  awaitResponse->start(timeOut);
+  
+}
+
+SvDevicePull::getStatus()
+{
+  isOnline = false;
+  
+  socket->connectToHost(ip, port);
+  if(socket->waitForConnected(100))
+  {
+    timer->stop();
+    isOnline = true;
+    
+//    QByteArray b = QByteArray();
+//    b.append("GET_DATA");
+    
+    socket->write(QString("GET_DATA").toLatin1());
+
+    awaitResponse->start(1000);
+  }
+
+  emit status();
+}
+
+SvDevicePull::getData()
+{
+  awaitResponse->stop();
+
+  if(socket->bytesAvailable() > 0)
+  {
+    QByteArray data = QByteArray();
+    data = socket->readAll();
+    
+    
+}
+
+SvDevicePull::disconnectFormHost()
+{
+  socket->disconnectFromHost();
+  timer->start();
 }

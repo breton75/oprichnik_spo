@@ -330,6 +330,40 @@ const QString qryCreateTable_system_log = "CREATE TABLE system_log"
 
 //---------------------------------------------------------------------------------
 
+
+/** свиридов **/
+  
+const QString qryCreateTable_sensor_data_full = "CREATE SEQUENCE public.sensor_data_full_id_seq "
+                                                "INCREMENT 1 "
+                                                "MINVALUE 1 "
+                                                "MAXVALUE 9223372036854775807 "
+                                                "START 1 "
+                                                "CACHE 1; "
+    "CREATE TABLE sensor_data_full("
+      "id integer NOT NULL DEFAULT nextval('sensor_data_full_id_seq'::regclass),"
+      "sensor_id integer,"
+      "date_time timestamp without time zone,"
+      "data bytea)"
+    "WITH (OIDS=FALSE);";
+
+const QString qryCreateTable_sensor_data_last = "CREATE SEQUENCE public.sensor_data_last_id_seq "
+                                                "INCREMENT 1 "
+                                                "MINVALUE 1 "
+                                                "MAXVALUE 9223372036854775807 "
+                                                "START 1 "
+                                                "CACHE 1; "
+    "CREATE TABLE sensor_data_last( "
+      "id integer NOT NULL DEFAULT nextval('sensor_data_last_id_seq'::regclass),"
+      "sensor_id integer, "
+      "date_time timestamp without time zone, "
+      "data bytea) "
+    "WITH (OIDS=FALSE);";
+//    "ALTER TABLE sensor_data_last ALTER COLUMN id SET DEFAULT nextval('sensor_data_last_id_seq'::regclass);";
+
+
+/**  **/
+
+
 //------------------------- КОНСТАНТЫ --------------------------------------------
 // список названий таблиц и скриптов для их создания
 const int tScript = 0;//
@@ -351,7 +385,11 @@ const QString tablesList[][2] = {
     {"tank_measures", qryCreateTable_tank_measures},
     {"tanks_fuel_rest", qryCreateTable_tanks_fuel_rest},
     {"fuel_measures", qryCreateTable_fuel_measures},
-    {"system_log", qryCreateTable_system_log}
+    {"system_log", qryCreateTable_system_log},
+  /** свиридов **/
+    {"sensor_data_full", qryCreateTable_sensor_data_full},
+    {"sensor_data_last", qryCreateTable_sensor_data_last}
+  /**  **/
 };
 
 #endif // PG_SCRIPTS_H
