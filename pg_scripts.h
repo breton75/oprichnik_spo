@@ -332,31 +332,47 @@ const QString qryCreateTable_system_log = "CREATE TABLE system_log"
 
 
 /** свиридов **/
-  
-const QString qryCreateTable_sensor_data_full = "CREATE SEQUENCE public.sensor_data_full_id_seq "
-                                                "INCREMENT 1 "
-                                                "MINVALUE 1 "
-                                                "MAXVALUE 9223372036854775807 "
-                                                "START 1 "
-                                                "CACHE 1; "
-    "CREATE TABLE sensor_data_full("
-      "id integer NOT NULL DEFAULT nextval('sensor_data_full_id_seq'::regclass),"
-      "sensor_id integer,"
+
+// Список датчиков
+const QString qryCreateTable_sensors = "CREATE TABLE sensors("
+        " id serial, "
+//        " project_id smallint REFERENCES projects(id) MATCH FULL ON UPDATE CASCADE ON DELETE RESTRICT,"
+        " sensor_type smallint REFERENCES sensor_types(id) MATCH FULL ON UPDATE CASCADE ON DELETE RESTRICT,"
+        " tank_id smallint REFERENCES tanks(id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE RESTRICT,"
+        " consumer_id smallint REFERENCES consumers(id) MATCH SIMPLE ON UPDATE CASCADE ON DELETE RESTRICT,"
+        " net_address smallint,"
+        " net_idx smallint,"
+        " data_type smallint,"
+        " lo_val double precision,"
+        " high_val double precision"
+        " )"
+        " WITHOUT OIDS;"
+        " ALTER TABLE sensors OWNER TO postgres;"
+        " COMMENT ON TABLE sensors IS 'Список датчиков';"
+        " COMMENT ON COLUMN sensors.id IS 'ИД датчика';"
+//        " COMMENT ON COLUMN sensors.project_id IS 'Привязка к проекту';"
+        " COMMENT ON COLUMN sensors.sensor_type IS 'Тип датчика';"
+        " COMMENT ON COLUMN sensors.tank_id IS 'ИД цистерны';"
+        " COMMENT ON COLUMN sensors.consumer_id IS 'ИД потребителя';"
+        " COMMENT ON COLUMN sensors.net_address IS 'Сетевой ИД (адрес) датчика';"
+        " COMMENT ON COLUMN sensors.net_idx IS 'Индекс датчика на ИП';"
+        " COMMENT ON COLUMN sensors.data_type IS 'Тип измеряемых данных';"
+        " COMMENT ON COLUMN sensors.high_val IS 'Максимальное значение';";
+
+/* все данные с датчиков */
+const QString qryCreateTable_sensor_data_full = "CREATE TABLE sensor_data_full("
+      "id serial, "
+      "sensor_id integer, "
       "date_time timestamp without time zone,"
-      "data bytea)"
+      "sensor_data bytea)"
     "WITH (OIDS=FALSE);";
 
-const QString qryCreateTable_sensor_data_last = "CREATE SEQUENCE public.sensor_data_last_id_seq "
-                                                "INCREMENT 1 "
-                                                "MINVALUE 1 "
-                                                "MAXVALUE 9223372036854775807 "
-                                                "START 1 "
-                                                "CACHE 1; "
-    "CREATE TABLE sensor_data_last( "
-      "id integer NOT NULL DEFAULT nextval('sensor_data_last_id_seq'::regclass),"
+/* последние полученные данные с датчиков */
+const QString qryCreateTable_sensor_data_last = "CREATE TABLE sensor_data_last( "
+      "id serial, "
       "sensor_id integer, "
       "date_time timestamp without time zone, "
-      "data bytea) "
+      "sensor_data bytea) "
     "WITH (OIDS=FALSE);";
 //    "ALTER TABLE sensor_data_last ALTER COLUMN id SET DEFAULT nextval('sensor_data_last_id_seq'::regclass);";
 
@@ -387,6 +403,7 @@ const QString tablesList[][2] = {
     {"fuel_measures", qryCreateTable_fuel_measures},
     {"system_log", qryCreateTable_system_log},
   /** свиридов **/
+    {"sensors", qryCreateTable_sensors},
     {"sensor_data_full", qryCreateTable_sensor_data_full},
     {"sensor_data_last", qryCreateTable_sensor_data_last}
   /**  **/

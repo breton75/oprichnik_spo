@@ -8,6 +8,10 @@
 #include "pg_scripts.h"
 #include "u_crc16.h"
 
+#include "sv_pgdb.h"
+
+extern SvPGDB* PGDB;
+
 // тестовое сообщение
 void MainWindow::fix(QString msg)
 {
@@ -44,6 +48,27 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // здесь / по кнопке ?
     initDB(true);
+    
+    /** свиридов **/
+//    PGDB = new SvPGDB(this);
+//    PGDB->setConnectionParams("drain_client", "172.16.4.83", 5432, "postgres", "postgres");
+    
+//    QSqlError err = PGDB->connectToDB();
+//    qDebug() << err.text();
+    
+//    if(err.type() != QSqlError::NoError)
+//    {
+//      QMessageBox::critical(this, "Ошибка", err.text(), QMessageBox::Ok);
+//      return;
+//    }
+    
+    model = new QSqlQueryModel();
+    
+    ui->table->setModel(model);
+    connect(ui->table, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(slotTableDoubleClicked(QModelIndex)));
+    
+    thr_map = new QMap<int, SvDevicePull*>;
+    
 }
 
 MainWindow::~MainWindow()
@@ -60,7 +85,7 @@ void MainWindow::initDB(bool withCheckTables)
 //    db.setHostName("localhost");
     db.setHostName("172.16.4.83");
     db.setPort(5432);
-    db.setDatabaseName(DBName);//DATABASE_NAME); // postgres
+    db.setDatabaseName(DBName);//DATABASE_NAME); // postgres drain_client
     db.setUserName("postgres");
     db.setPassword("postgres");
     //db.setConnectOptions("Timeout=10;"); // error
@@ -757,64 +782,173 @@ void MainWindow::on_pbnCRC16_clicked()
 /** свиридов **/
 void MainWindow::on_bnStart_clicked()
 {
-      
-}
-
-
-
-
-
-
-SvDevicePull::run()
-{
-  socket = QTcpSocket(this);
-  connect(socket, SIGNAL(readyRead()), this, SLOT(getData()));
+  model->query().finish();
   
-  timer = QTimer(this);
-  timer.setInterval(1000);
-  connect(timer, SIGNAL(QTimer::timeout()), this, SLOT(getStatus()));
-  
-  awaitResponse = QTimer(this);
-  connect(awaitResponse, SIGNAL(QTimer::timeout()), this, SLOT(disconnectFormHost()));
-  awaitResponse->start(timeOut);
-  
-}
+  QString sql = "SELECT  "
+                "  sensors.id as sensor_id, "
+                "  sensor_types.type_name as sensor_type_name, "
+                "  tanks.name as tank_name, "
+                "  sensor_data_last.sensor_data as last_data " 
+                "FROM sensors "
+                "LEFT JOIN sensor_types ON sensors.sensor_type = sensor_types.id "
+                "LEFT JOIN sensor_data_last ON sensors.id = sensor_data_last.sensor_id "
+                "LEFT JOIN tanks ON sensors.tank_id = tanks.id "
+                "ORDER BY sensors.id ASC";
 
-SvDevicePull::getStatus()
-{
-  isOnline = false;
+  model->setQuery(sql, db);
+  model->query().execBatch();
+  qDebug() << model->query().lastError().text();
   
-  socket->connectToHost(ip, port);
-  if(socket->waitForConnected(100))
+  if(model->query().lastError().type() != QSqlError::NoError)
   {
-    timer->stop();
-    isOnline = true;
-    
-//    QByteArray b = QByteArray();
-//    b.append("GET_DATA");
-    
-    socket->write(QString("GET_DATA").toLatin1());
-
-    awaitResponse->start(1000);
+    QMessageBox::critical(this, "Ошибка", model->query().lastError().text(), QMessageBox::Ok);
+    return;
   }
+   
+  model->setHeaderData(0,  Qt::Horizontal, "ID");
+  model->setHeaderData(1,  Qt::Horizontal, "Тип");
+  model->setHeaderData(2,  Qt::Horizontal, "Бак");
+  model->setHeaderData(3,  Qt::Horizontal, "Данные");
+  
+  if(thr_map) delete(thr_map);
+  thr_map = new QMap<int, SvDevicePull*>;  
+  
+  while(model->query().next())
+  {
+    int id = model->query().value("sensor_id").toInt();
+    thr_map->insert(id, new SvDevicePull(id, &db, this));
+    thr_map->last()->start();
+  }
+  
+  ui->bnStart->setEnabled(false);
+  ui->bnStop->setEnabled(true);
+  
+}
 
+void MainWindow::on_bnStop_clicked()
+{
+  foreach (SvDevicePull *devp, thr_map->values()) {
+    devp->stop();
+    while(!devp->isFinished()) QApplication::processEvents();
+    delete(devp);
+//    devp->deleteLater();
+  }
+  
+  ui->bnStart->setEnabled(true);
+  ui->bnStop->setEnabled(false);
+  
+}
+
+void MainWindow::slotTableDoubleClicked(QModelIndex mi)
+{
+  int id = model->data(ui->table->currentIndex()).toInt();
+  qDebug() << id;
+}
+
+
+SvDevicePull::SvDevicePull(int id, QSqlDatabase *db, QObject *parent)
+  :  QThread(parent)
+//  QObject(parent)
+{
+  _id = id;
+  _db = db;
+  
+  _socket = new QTcpSocket(this);
+  connect(_socket, SIGNAL(readyRead()), this, SLOT(getData()));
+  
+  timer = new QTimer(this);
+  timer->setInterval(1000);
+  connect(timer, SIGNAL(timeout()), this, SLOT(getStatus()));
+  timer->start();
+  
+  awaitResponse = new QTimer(this);
+  awaitResponse->setInterval(1000);
+  connect(awaitResponse, SIGNAL(timeout()), this, SLOT(disconnectFormHost()));
+  
+  
+}
+
+SvDevicePull::~SvDevicePull()
+{
+  
+}
+
+
+void SvDevicePull::run()
+{
+  qDebug() << "here";
+}
+
+void SvDevicePull::getStatus()
+{
+  float val = float(qrand()) / RAND_MAX;
+  QByteArray b = QByteArray(reinterpret_cast<const char*>(&val), sizeof(val));
+  
+
+  
+  QString sql = QString("UPDATE sensor_data_last set date_time='%1', sensor_data='?' where sensor_id = %2") //
+                .arg(QDateTime::currentDateTime().toString("dd/MM/yyyy hh:mm:ss"))
+                .arg(_id);
+  
+  QSqlQuery *q = new QSqlQuery(sql, *_db);
+  q->prepare(sql);
+  q->addBindValue(QVariant(b), QSql::In | QSql::Binary);
+  q->execBatch();
+  
+  QSqlError err = q->lastError();
+  qDebug() << "id" << _id << " val" << QString::number(val) << err.text();
+  
+  q->finish();
+  delete(q);
+  
+  
+  
+//  isOnline = false;
+  
+//  socket->connectToHost(ip, port);
+//  if(socket->waitForConnected(100))
+//  {
+//    timer->stop();
+//    isOnline = true;
+    
+////    QByteArray b = QByteArray();
+////    b.append("GET_DATA");
+    
+//    socket->write(QString("GET_DATA").toLatin1());
+
+//    awaitResponse->start(1000);
+//  }
+
+  
+  
   emit status();
 }
 
-SvDevicePull::getData()
+void SvDevicePull::getData()
 {
   awaitResponse->stop();
+  
+//  qsrand(1000);
+  float val = qrand() / RAND_MAX;
 
-  if(socket->bytesAvailable() > 0)
-  {
-    QByteArray data = QByteArray();
-    data = socket->readAll();
-    
+  qDebug() << "id" << _id << " val" << val;
+  
+//  if(socket->bytesAvailable() > 0)
+//  {
+//    QByteArray data = QByteArray();
+//    data = socket->readAll();
+//  }
     
 }
 
-SvDevicePull::disconnectFormHost()
+void SvDevicePull::disconnectFormHost()
 {
-  socket->disconnectFromHost();
+//  socket->disconnectFromHost();
   timer->start();
 }
+
+void SvDevicePull::stop()
+{
+  timer->stop();
+}
+

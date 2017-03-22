@@ -8,10 +8,24 @@
 
 #include <QTimer>
 #include <QTcpSocket>
+#include <QThread>
+#include <QMap>
+#include <QDebug>
+#include <QSqlQueryModel>
+#include <QTableView>
+
 
 namespace Ui {
 class MainWindow;
 }
+
+struct SensorData
+{
+  int id;
+  QByteArray data;
+};
+
+class SvDevicePull;
 
 class MainWindow : public QMainWindow
 {
@@ -26,7 +40,22 @@ private slots:
 
     void on_pbnCRC16_clicked();
 
+    
+/** свиридов **/
     void on_bnStart_clicked();
+    void slotTableDoubleClicked(QModelIndex);
+    
+    
+    void on_bnStop_clicked();
+    
+public:
+    QMap<int, SvDevicePull*> *thr_map;
+    
+    QSqlQueryModel *model;
+    
+    
+/** **/
+    
     
 private:
     Ui::MainWindow *ui;
@@ -42,20 +71,33 @@ private:
     void fix(QString msg); // тестовое сообщение
 };
 
-class SvDevicePull: public QRunnable
+
+class SvDevicePull: public QThread // QObject
 {
+  Q_OBJECT
+  
 public:
-  QTimer timer;
-  QTimer awaitResponse;
+  SvDevicePull(int id, QSqlDatabase *db, QObject *parent = 0);
+  
+  ~SvDevicePull();
+  
+  QTimer *timer; // = QTimer();
+  QTimer *awaitResponse; // = QTimer();
   bool isOnline;
+  
+  void stop();
   
   QString ip;
   quint16 port;
   
-  void run();
+  
+protected:
+  void run() Q_DECL_OVERRIDE;
     
 private:
-  QTcpSocket socket;
+  QTcpSocket *_socket;
+  int _id;
+  QSqlDatabase* _db;
   
 private slots:
   void getStatus();

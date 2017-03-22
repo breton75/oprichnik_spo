@@ -12,10 +12,12 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-        u_log.cpp
+        u_log.cpp \
+    sv_pgdb.cpp
 
 HEADERS  += mainwindow.h \
     u_log.h \
-    pg_scripts.h
+    pg_scripts.h \
+    sv_pgdb.h
 
 FORMS    += mainwindow.ui
