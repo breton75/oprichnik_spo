@@ -67,7 +67,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->table->setModel(model);
     connect(ui->table, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(slotTableDoubleClicked(QModelIndex)));
     
-    thr_map = new QMap<int, SvDevicePull*>;
+//    thr_map = new QMap<int, SvDevicePull*>;
     
 }
 
@@ -810,29 +810,28 @@ void MainWindow::on_bnStart_clicked()
   model->setHeaderData(2,  Qt::Horizontal, "Бак");
   model->setHeaderData(3,  Qt::Horizontal, "Данные");
   
-  if(thr_map) delete(thr_map);
-  thr_map = new QMap<int, SvDevicePull*>;  
-  
-  while(model->query().next())
-  {
-    int id = model->query().value("sensor_id").toInt();
-    thr_map->insert(id, new SvDevicePull(id, &db, this));
-    thr_map->last()->start();
-  }
-  
   ui->bnStart->setEnabled(false);
   ui->bnStop->setEnabled(true);
+  
+  
+  if(thr_pull) delete(thr_pull);
+  thr_pull = new QThread(this);  
+  dev_pull = new SvDevicePull(&db, this);
+  connect(thr_pull, SIGNAL(finished()), dev_pull, SLOT(deleteLater()));
+  dev_pull->moveToThread(thr_pull);
+  thr_pull->start();
+  
   
 }
 
 void MainWindow::on_bnStop_clicked()
 {
-  foreach (SvDevicePull *devp, thr_map->values()) {
-    devp->stop();
-    while(!devp->isFinished()) QApplication::processEvents();
-    delete(devp);
-//    devp->deleteLater();
-  }
+  dev_pull->stop();
+  thr_pull->quit();
+  
+  while(!thr_pull->isFinished()) QApplication::processEvents();
+  
+  delete thr_pull;
   
   ui->bnStart->setEnabled(true);
   ui->bnStop->setEnabled(false);
@@ -846,11 +845,11 @@ void MainWindow::slotTableDoubleClicked(QModelIndex mi)
 }
 
 
-SvDevicePull::SvDevicePull(int id, QSqlDatabase *db, QObject *parent)
-  :  QThread(parent)
-//  QObject(parent)
+SvDevicePull::SvDevicePull(QSqlDatabase *db, QObject *parent)
+//  :  QThread(parent)
+  : QObject(parent)
 {
-  _id = id;
+//  _id = id;
   _db = db;
   
   _socket = new QTcpSocket(this);
@@ -874,10 +873,10 @@ SvDevicePull::~SvDevicePull()
 }
 
 
-void SvDevicePull::run()
-{
-  qDebug() << "here";
-}
+//void SvDevicePull::run()
+//{
+//  qDebug() << "here";
+//}
 
 void SvDevicePull::getStatus()
 {

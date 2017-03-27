@@ -48,10 +48,11 @@ private slots:
     
     void on_bnStop_clicked();
     
-public:
-    QMap<int, SvDevicePull*> *thr_map;
-    
+private:
+//    QMap<int, SvDevicePull*> *thr_map;    
     QSqlQueryModel *model;
+    SvDevicePull *dev_pull;
+    QThread *thr_pull = nullptr;
     
     
 /** **/
@@ -72,12 +73,12 @@ private:
 };
 
 
-class SvDevicePull: public QThread // QObject
+class SvDevicePull: public QObject // QThread
 {
   Q_OBJECT
   
 public:
-  SvDevicePull(int id, QSqlDatabase *db, QObject *parent = 0);
+  SvDevicePull(QSqlDatabase *db, QObject *parent = 0);
   
   ~SvDevicePull();
   
@@ -91,8 +92,8 @@ public:
   quint16 port;
   
   
-protected:
-  void run() Q_DECL_OVERRIDE;
+//protected:
+//  void run() Q_DECL_OVERRIDE;
     
 private:
   QTcpSocket *_socket;
