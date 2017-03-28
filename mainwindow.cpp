@@ -1,12 +1,5 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include <QSplitter>
-#include <QFileDialog>
-#include <QMessageBox>
-
-#include "u_log.h"
-#include "pg_scripts.h"
-#include "u_crc16.h"
 
 #include "sv_pgdb.h"
 
@@ -786,7 +779,7 @@ void MainWindow::on_bnStart_clicked()
   
   QString sql = "SELECT  "
                 "  sensors.id as sensor_id, "
-                "  sensor_types.type_name as sensor_type_name, "
+                "  sensor_types.name as sensor_type_name, "
                 "  tanks.name as tank_name, "
                 "  sensor_data_last.sensor_data as last_data " 
                 "FROM sensors "
@@ -883,13 +876,77 @@ void SvDevicePull::getStatus()
   float val = float(qrand()) / RAND_MAX;
   QByteArray b = QByteArray(reinterpret_cast<const char*>(&val), sizeof(val));
   
-
+  QString sql = " SELECT  "
+                " sensors.id as id, "
+                " sensors.sensor_type as sensor_type, "
+                " sensors.net_address as net_address, "
+                " sensors.net_idx as net_idx, "
+                " sensors.data_type as data_type, "
+                " sensors.lo_val as lo_val, "
+                " sensors.high_val as high_val, "
+                " sensor_data_last.date_time as date_time "
+                " FROM sensors "
+                " LEFT JOIN sensor_data_last on sensors.id = sensor_data_last.sensor_id "
+                " ORDER BY sensor_data_last.date_time ASC"; // вначале опрашиваем самые старые
+  
+  SgComPort *com = new SgComPort(this);
+  QSqlQuery *q = new QSqlQuery(sql, *_db);
+  
+  while (isOnline)
+  {
+    q->finish();
+    q->execBatch();
+    
+    if(q->lastError().type() != QSqlError::NoError)
+    {
+      /* выводим сообщение об ошибке и пытаемся опять сделать запрос */
+      qDebug() << q->lastError().text();
+      continue;
+    }
+      
+    while(q->next())
+    {
+      quint16 net_idx = q->value("net_idx").toInt();
+      QDateTime last_pull = q->value("date_time").toDateTime();
+      quint32 pull_time = q->value("pull_time").toInt();
+      quint32 timeout = q->value("timeout").toInt();
+          
+      /* если период опроса еще не прошел, то идем к следующей записи */
+      if(last_pull.msecsTo(QDateTime::currentDateTime()) < pull_time)
+        continue;
+      
+      /* открываем порт */
+      if(!com->open(net_idx))
+      {
+        qDebug() << com->mode;
+        com->close();
+        continue;
+      }
+      
+      /* 
+      * подготавливаем данные для записи в порт
+      */
+      
+      QByteArray pack = QByteArray();
+        
+      com->write(pack);
+               
+      _awaitigTimer.setInterval(_timeout);
+      _awaitigTimer.start();
+      
+    }
+  }
+  
+  q->finish();
+  delete q;
+  
+  _com->close();
+  delete _com;
   
   QString sql = QString("UPDATE sensor_data_last set date_time='%1', sensor_data='?' where sensor_id = %2") //
                 .arg(QDateTime::currentDateTime().toString("dd/MM/yyyy hh:mm:ss"))
                 .arg(_id);
   
-  QSqlQuery *q = new QSqlQuery(sql, *_db);
   q->prepare(sql);
   q->addBindValue(QVariant(b), QSql::In | QSql::Binary);
   q->execBatch();

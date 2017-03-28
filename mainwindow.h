@@ -5,7 +5,6 @@
 #include <QObject>
 #include <QtSql>
 
-
 #include <QTimer>
 #include <QTcpSocket>
 #include <QThread>
@@ -13,6 +12,15 @@
 #include <QDebug>
 #include <QSqlQueryModel>
 #include <QTableView>
+
+#include <QSplitter>
+#include <QFileDialog>
+#include <QMessageBox>
+
+#include "u_log.h"
+#include "pg_scripts.h"
+#include "u_crc16.h"
+#include "sg_comport.h"
 
 
 namespace Ui {
@@ -86,19 +94,30 @@ public:
   QTimer *awaitResponse; // = QTimer();
   bool isOnline;
   
+  
   void stop();
   
-  QString ip;
-  quint16 port;
   
   
 //protected:
 //  void run() Q_DECL_OVERRIDE;
     
 private:
+  QString _ip;
+  quint16 _port;
+  
+//  quint16 _net_idx;
+//  QDateTime _last_pull;
+//  quint32 _pull_time;
+//  quint32 _timeout;
+  
+//  SgComPort* _com;
+  
   QTcpSocket *_socket;
   int _id;
   QSqlDatabase* _db;
+  
+  QTimer _awaitigTimer;
   
 private slots:
   void getStatus();
