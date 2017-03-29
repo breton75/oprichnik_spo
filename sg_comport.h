@@ -47,9 +47,12 @@ public:
     QString getComName(int portIdx);
     QString errorString();
 
-private:
+    /* свиридов. переместил из private */
     QSerialPort* com;
+//    QString mode() { return mode; }
     QString mode;
+    
+private:
     QString errSt;
     quint8 portIndex;
     bool opened;

@@ -1,6 +1,8 @@
 #ifndef U_CRC16
 #define U_CRC16
 
+unsigned short Crc16(unsigned char *pcBlock, unsigned short len);
+unsigned short Crc16_quick(unsigned char * pcBlock, unsigned short len);
 
 /*
   Цельнотянуто отсюда: Викиучебник - Реализации алгоритмов/Циклический избыточный код

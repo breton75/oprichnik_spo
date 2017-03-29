@@ -345,8 +345,11 @@ const QString qryCreateTable_sensors = "CREATE TABLE sensors( "
         " data_type smallint, "
         " lo_val double precision, "
         " high_val double precision, "
-        " pull_time integer DEFAULT 1"
-        " timeout integer ) "
+        /* свиридов */  
+        " pull_time integer DEFAULT 1000, "
+        " pull_timeout integer DEFAULT 50, "
+        " is_active boolean DEFAULT TRUE ) "
+        /*  */
         " WITHOUT OIDS;"
         " ALTER TABLE sensors OWNER TO postgres;"
         " COMMENT ON TABLE sensors IS 'Список датчиков';"
@@ -359,8 +362,10 @@ const QString qryCreateTable_sensors = "CREATE TABLE sensors( "
         " COMMENT ON COLUMN sensors.net_idx IS 'Индекс датчика на ИП';"
         " COMMENT ON COLUMN sensors.data_type IS 'Тип измеряемых данных';"
         " COMMENT ON COLUMN sensors.high_val IS 'Максимальное значение';"
+        /* свиридов */                               
         " COMMENT ON COLUMN sensors.pull_time IS 'Период опроса устройства. В миллисекундах';"
-        " COMMENT ON COLUMN sensors.timeout IS 'Время ожидания ответа. В миллисекундах';";
+        " COMMENT ON COLUMN sensors.timeout IS 'Время ожидания ответа. В миллисекундах';"
+        " COMMENT ON COLUMN sensors.is_active IS 'Активен ли датчик. Если нет, то его не опрашиваем';";
 
 /* все данные с датчиков */
 const QString qryCreateTable_sensor_data_full = "CREATE TABLE sensor_data_full("

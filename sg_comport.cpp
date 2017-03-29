@@ -94,7 +94,7 @@ bool SgComPort::open(int idx)
     com->setDataBits(QSerialPort::Data8);
     com->setStopBits(QSerialPort::TwoStop);
     com->setParity(QSerialPort::NoParity);
-    com->setBreakEnabled(false);
+//    com->setBreakEnabled(false);
     //com->setFlowControl(QSerialPort::NoFlowControl);
 
     try {

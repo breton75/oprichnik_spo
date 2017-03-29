@@ -19,9 +19,10 @@
 
 #include "u_log.h"
 #include "pg_scripts.h"
-#include "u_crc16.h"
+
 #include "sg_comport.h"
 
+#include "sv_pgdb.h"
 
 namespace Ui {
 class MainWindow;
@@ -43,6 +44,7 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
+  
 private slots:
     void on_pbnLoadConfig_clicked();
 
@@ -52,15 +54,17 @@ private slots:
 /** свиридов **/
     void on_bnStart_clicked();
     void slotTableDoubleClicked(QModelIndex);
-    
-    
     void on_bnStop_clicked();
+    
+public slots:
+  void dataUpdated();
     
 private:
 //    QMap<int, SvDevicePull*> *thr_map;    
     QSqlQueryModel *model;
-    SvDevicePull *dev_pull;
-    QThread *thr_pull = nullptr;
+    SvDevicePull *dev_pull = nullptr;
+//    QThread *thr_pull = nullptr;
+    
     
     
 /** **/
@@ -81,26 +85,26 @@ private:
 };
 
 
-class SvDevicePull: public QObject // QThread
+class SvDevicePull: public QThread
 {
   Q_OBJECT
   
 public:
-  SvDevicePull(QSqlDatabase *db, QObject *parent = 0);
+  SvDevicePull(QSqlDatabase db, QObject *parent = 0);
   
   ~SvDevicePull();
   
-  QTimer *timer; // = QTimer();
-  QTimer *awaitResponse; // = QTimer();
-  bool isOnline;
+//  QTimer *timer; // = QTimer();
+//  QTimer *awaitResponse; // = QTimer();
   
+  bool isPulling() { return _isPulling; }
+  bool isFinished() { return _isFinished; }
   
-  void stop();
+//  void stop();
+   
   
-  
-  
-//protected:
-//  void run() Q_DECL_OVERRIDE;
+protected:
+  void run() Q_DECL_OVERRIDE;
     
 private:
   QString _ip;
@@ -115,17 +119,25 @@ private:
   
   QTcpSocket *_socket;
   int _id;
-  QSqlDatabase* _db;
+  QSqlDatabase _db;
+  
+  bool _isPulling = false;
+  bool _isFinished = true;
   
   QTimer _awaitigTimer;
   
-private slots:
-  void getStatus();
-  void getData();
-  void disconnectFormHost();
+//  SvPGDB* pgdb;
+  
+public slots:
+  void startPulling();
+  void stopPulling();
+  
+//  void getStatus();
+//  void getData();
+//  void disconnectFormHost();
   
 signals:
-  void status();
+  void data_updated();
   
 };
 
