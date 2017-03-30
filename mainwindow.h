@@ -16,13 +16,14 @@
 #include <QSplitter>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QMutex>
 
 #include "u_log.h"
 #include "pg_scripts.h"
 
 #include "sg_comport.h"
 
-#include "sv_pgdb.h"
+//#include "sv_pgdb.h"
 
 namespace Ui {
 class MainWindow;
@@ -60,11 +61,9 @@ public slots:
   void dataUpdated();
     
 private:
-//    QMap<int, SvDevicePull*> *thr_map;    
-    QSqlQueryModel *model;
-    SvDevicePull *dev_pull = nullptr;
-//    QThread *thr_pull = nullptr;
-    
+    QSqlQueryModel *_model;
+    SvDevicePull *_dev_pull = nullptr;
+
     
     
 /** **/
@@ -94,47 +93,21 @@ public:
   
   ~SvDevicePull();
   
-//  QTimer *timer; // = QTimer();
-//  QTimer *awaitResponse; // = QTimer();
-  
   bool isPulling() { return _isPulling; }
   bool isFinished() { return _isFinished; }
   
-//  void stop();
-   
   
 protected:
   void run() Q_DECL_OVERRIDE;
     
 private:
-  QString _ip;
-  quint16 _port;
-  
-//  quint16 _net_idx;
-//  QDateTime _last_pull;
-//  quint32 _pull_time;
-//  quint32 _timeout;
-  
-//  SgComPort* _com;
-  
-  QTcpSocket *_socket;
-  int _id;
   QSqlDatabase _db;
   
   bool _isPulling = false;
   bool _isFinished = true;
   
-  QTimer _awaitigTimer;
-  
-//  SvPGDB* pgdb;
-  
 public slots:
-  void startPulling();
   void stopPulling();
-  
-//  void getStatus();
-//  void getData();
-//  void disconnectFormHost();
   
 signals:
   void data_updated();
